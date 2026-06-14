@@ -1,6 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
-import gsap from 'gsap';
+import React, { useEffect, useState } from 'react';
 import { FiSearch, FiHash, FiUser, FiAnchor, FiAward } from 'react-icons/fi';
 import { fetchDirectoryUsers, setActiveConversation, fetchMessages } from '../../store/slices/chatSlice.js';
 
@@ -16,19 +14,6 @@ const ChatList = () => {
     dispatch(fetchDirectoryUsers(searchTerm));
   }, [dispatch, searchTerm]);
 
-  // GSAP animation for loaded lists
-  useEffect(() => {
-    if (!loadingDirectory) {
-      gsap.fromTo('.chat-item-header',
-        { opacity: 0, y: -5 },
-        { opacity: 1, y: 0, duration: 0.3, stagger: 0.05 }
-      );
-      gsap.fromTo('.chat-item-row',
-        { opacity: 0, x: -10 },
-        { opacity: 1, x: 0, duration: 0.4, ease: 'power2.out', stagger: 0.03 }
-      );
-    }
-  }, [loadingDirectory, conversations.length, directoryUsers.length]);
 
   const handleSelectConvo = (convo) => {
     dispatch(setActiveConversation(convo));

@@ -1,6 +1,5 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import gsap from "gsap";
 import {
   FiClock,
   FiShield,
@@ -17,31 +16,9 @@ const AuditLogs = () => {
   );
   const [currentPage, setCurrentPage] = useState(1);
 
-  const tableRef = useRef(null);
-
   useEffect(() => {
     dispatch(fetchAdminAuditLogs({ page: currentPage, limit: 10 }));
   }, [dispatch, currentPage]);
-
-  // GSAP animation for log rows
-  useEffect(() => {
-    if (!loadingLogs && auditLogs.length > 0) {
-      const ctx = gsap.context(() => {
-        gsap.fromTo(
-          ".log-row",
-          { opacity: 0, y: 10 },
-          {
-            opacity: 1,
-            y: 0,
-            duration: 0.4,
-            ease: "power2.out",
-            stagger: 0.04,
-          },
-        );
-      }, tableRef);
-      return () => ctx.revert();
-    }
-  }, [loadingLogs, auditLogs.length]);
 
   const handlePrevPage = () => {
     if (currentPage > 1) setCurrentPage((prev) => prev - 1);
@@ -95,7 +72,6 @@ const AuditLogs = () => {
 
         {/* Audit Log Table Card */}
         <div
-          ref={tableRef}
           className="rounded-3xl bg-white dark:bg-dark-card border border-gray-200 dark:border-dark-border shadow-sm overflow-hidden"
         >
           <div className="overflow-x-auto">
@@ -134,7 +110,7 @@ const AuditLogs = () => {
                     return (
                       <tr
                         key={log._id}
-                        className="log-row border-b border-gray-200 dark:border-dark-border/60 hover:bg-gray-50/50 dark:hover:bg-gray-800/10 text-xs font-semibold text-gray-600 dark:text-gray-300 transition-colors"
+                      className="log-row animate-row-enter border-b border-gray-200 dark:border-dark-border/60 hover:bg-gray-50/50 dark:hover:bg-gray-800/10 text-xs font-semibold text-gray-600 dark:text-gray-300 transition-colors"
                       >
                         {/* Timestamp */}
                         <td className="py-4 px-6 font-mono text-[11px] shrink-0">

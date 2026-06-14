@@ -1,5 +1,4 @@
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
-import gsap from 'gsap';
 import { FiCheckCircle, FiAlertOctagon, FiInfo, FiAlertTriangle, FiX } from 'react-icons/fi';
 
 const ToastContext = createContext(null);
@@ -8,55 +7,34 @@ export const useToast = () => useContext(ToastContext);
 
 export const ToastProvider = ({ children }) => {
   const [toast, setToast] = useState(null); // { message, type: 'success'|'error'|'info'|'warning' }
-  const toastRef = useRef(null);
-  const progressRef = useRef(null);
   const timerRef = useRef(null);
 
   const showToast = (message, type = 'info') => {
-    // Clear any existing timer
     if (timerRef.current) {
       clearTimeout(timerRef.current);
     }
-
-    setToast({ message, type });
+    // Reset by setting null first so re-triggering the same type replays the CSS animation
+    setToast(null);
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        setToast({ message, type });
+      });
+    });
   };
 
   const closeToast = () => {
-    if (toastRef.current) {
-      gsap.to(toastRef.current, {
-        x: 350,
-        opacity: 0,
-        duration: 0.3,
-        ease: 'power2.in',
-        onComplete: () => setToast(null)
-      });
-    } else {
-      setToast(null);
+    setToast(null);
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
     }
   };
 
   useEffect(() => {
     if (toast) {
-      // Entrance animation
-      gsap.fromTo(toastRef.current,
-        { x: 300, opacity: 0, scale: 0.9 },
-        { x: 0, opacity: 1, scale: 1, duration: 0.4, ease: 'back.out(1.2)' }
-      );
-
-      // Animate progress bar shrinking
-      if (progressRef.current) {
-        gsap.fromTo(progressRef.current,
-          { width: '100%' },
-          { width: '0%', duration: 5, ease: 'linear' }
-        );
-      }
-
-      // Auto dismiss after 5 seconds
       timerRef.current = setTimeout(() => {
-        closeToast();
+        setToast(null);
       }, 5000);
     }
-
     return () => {
       if (timerRef.current) {
         clearTimeout(timerRef.current);
@@ -100,17 +78,15 @@ export const ToastProvider = ({ children }) => {
     <ToastContext.Provider value={{ showToast, closeToast }}>
       {children}
 
-      {/* Floating Toast Notification Box */}
+      {/* Floating Toast Notification — CSS slide-in animation */}
       {toast && (
-        <div className="fixed top-6 right-6 z-50 w-full max-w-sm pointer-events-auto">
+        <div className="fixed top-6 right-6 z-50 w-full max-w-sm pointer-events-auto animate-toast-enter">
           <div
-            ref={toastRef}
-            className={`relative flex items-start gap-3.5 p-4 rounded-2xl border backdrop-blur-md shadow-2xl overflow-hidden transition-all duration-300 ${styles.bg}`}
+            className={`relative flex items-start gap-3.5 p-4 rounded-2xl border backdrop-blur-md shadow-2xl overflow-hidden ${styles.bg}`}
           >
-            {/* Countdown timer bar */}
+            {/* Countdown timer bar — CSS width animation */}
             <div
-              ref={progressRef}
-              className={`absolute bottom-0 left-0 h-[3px] rounded-r-full transition-all ${styles.bar}`}
+              className={`absolute bottom-0 left-0 h-[3px] rounded-r-full animate-progress-bar ${styles.bar}`}
             />
 
             {/* Icon */}

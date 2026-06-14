@@ -1,5 +1,4 @@
-import React, { createContext, useContext, useState, useRef, useEffect } from 'react';
-import gsap from 'gsap';
+import React, { createContext, useContext, useState } from 'react';
 import { FiAlertTriangle } from 'react-icons/fi';
 
 const ConfirmContext = createContext(null);
@@ -11,9 +10,6 @@ export const ConfirmProvider = ({ children }) => {
   const [options, setOptions] = useState({ title: '', message: '', confirmText: 'Confirm', cancelText: 'Cancel' });
   const [resolveRef, setResolveRef] = useState(null);
 
-  const modalRef = useRef(null);
-  const backdropRef = useRef(null);
-
   const confirm = (message, title = 'Confirmation Required', confirmText = 'Confirm', cancelText = 'Cancel') => {
     setOptions({ title, message, confirmText, cancelText });
     setIsOpen(true);
@@ -22,72 +18,24 @@ export const ConfirmProvider = ({ children }) => {
     });
   };
 
-  useEffect(() => {
-    if (isOpen) {
-      // Backdrop fade in
-      gsap.fromTo(backdropRef.current,
-        { opacity: 0 },
-        { opacity: 1, duration: 0.25, ease: 'power2.out' }
-      );
-      // Modal scale up and slide down
-      gsap.fromTo(modalRef.current,
-        { scale: 0.9, y: -20, opacity: 0 },
-        { scale: 1, y: 0, opacity: 1, duration: 0.35, ease: 'back.out(1.5)' }
-      );
-    }
-  }, [isOpen]);
-
   const handleConfirm = () => {
-    gsap.to(modalRef.current, {
-      scale: 0.95,
-      y: 10,
-      opacity: 0,
-      duration: 0.2,
-      ease: 'power2.in',
-      onComplete: () => {
-        setIsOpen(false);
-        if (resolveRef) resolveRef(true);
-      }
-    });
-    gsap.to(backdropRef.current, {
-      opacity: 0,
-      duration: 0.2,
-      ease: 'power2.in'
-    });
+    setIsOpen(false);
+    if (resolveRef) resolveRef(true);
   };
 
   const handleCancel = () => {
-    gsap.to(modalRef.current, {
-      scale: 0.95,
-      y: 10,
-      opacity: 0,
-      duration: 0.2,
-      ease: 'power2.in',
-      onComplete: () => {
-        setIsOpen(false);
-        if (resolveRef) resolveRef(false);
-      }
-    });
-    gsap.to(backdropRef.current, {
-      opacity: 0,
-      duration: 0.2,
-      ease: 'power2.in'
-    });
+    setIsOpen(false);
+    if (resolveRef) resolveRef(false);
   };
 
   return (
     <ConfirmContext.Provider value={{ confirm }}>
       {children}
 
+      {/* CSS-animated backdrop + modal — no GSAP */}
       {isOpen && (
-        <div
-          ref={backdropRef}
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm"
-        >
-          <div
-            ref={modalRef}
-            className="w-full max-w-sm p-6 rounded-3xl bg-white dark:bg-dark-card border border-gray-200 dark:border-dark-border shadow-2xl text-center space-y-4"
-          >
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-backdrop-enter">
+          <div className="animate-modal-enter w-full max-w-sm p-6 rounded-3xl bg-white dark:bg-dark-card border border-gray-200 dark:border-dark-border shadow-2xl text-center space-y-4">
             {/* Warning Icon Badge */}
             <div className="mx-auto h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary shadow-inner shadow-primary/5">
               <FiAlertTriangle size={24} />
@@ -96,7 +44,7 @@ export const ConfirmProvider = ({ children }) => {
             <h3 className="font-extrabold text-lg text-gray-900 dark:text-white">
               {options.title}
             </h3>
-            
+
             <p className="text-xs text-gray-500 dark:text-gray-400 font-semibold leading-relaxed">
               {options.message}
             </p>

@@ -1,7 +1,6 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import gsap from "gsap";
 import { FiMail, FiLock } from "react-icons/fi";
 import { loginUser, clearAuthError } from "../store/slices/authSlice.js";
 import { useToast } from "../context/ToastContext.jsx";
@@ -13,13 +12,8 @@ const Login = () => {
 
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  const { loading, isAuthenticated } = useSelector(
-    (state) => state.auth,
-  );
+  const { loading, isAuthenticated } = useSelector((state) => state.auth);
   const { showToast } = useToast();
-
-  const containerRef = useRef(null);
-  const cardRef = useRef(null);
 
   const isSessionExpired = searchParams.get("expired") === "true";
 
@@ -42,36 +36,10 @@ const Login = () => {
     }
   }, [isAuthenticated, navigate]);
 
-  // GSAP Entrance Animation
-  useEffect(() => {
-    const ctx = gsap.context(() => {
-      // Fade in background gradients
-      gsap.fromTo(
-        ".bg-glow",
-        { opacity: 0, scale: 0.6 },
-        {
-          opacity: 0.6,
-          scale: 1,
-          duration: 1.5,
-          ease: "power2.out",
-          stagger: 0.2,
-        },
-      );
-      // Animating the login card
-      gsap.fromTo(
-        cardRef.current,
-        { opacity: 0, y: 50, scale: 0.95 },
-        { opacity: 1, y: 0, scale: 1, duration: 1, ease: "back.out(1.2)" },
-      );
-    }, containerRef);
-
-    return () => ctx.revert();
-  }, []);
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!email || !password) return;
-    
+
     const actionResult = await dispatch(loginUser({ email, password }));
     if (loginUser.fulfilled.match(actionResult)) {
       showToast(`Logged in successfully! Welcome, ${actionResult.payload.user.name}.`, "success");
@@ -81,19 +49,13 @@ const Login = () => {
   };
 
   return (
-    <div
-      ref={containerRef}
-      className="relative min-h-screen w-screen flex items-center justify-center overflow-hidden bg-dark-bg text-white"
-    >
-      {/* Background Neon Glowing Orbs */}
-      <div className="bg-glow absolute top-[10%] left-[15%] w-96 h-96 rounded-full bg-primary/20 blur-[100px] pointer-events-none"></div>
-      <div className="bg-glow absolute bottom-[10%] right-[15%] w-96 h-96 rounded-full bg-accent-indigo/20 blur-[100px] pointer-events-none"></div>
+    <div className="relative min-h-screen w-screen flex items-center justify-center overflow-hidden bg-dark-bg text-white">
+      {/* Background Neon Glowing Orbs — CSS animated */}
+      <div className="animate-glow-orb absolute top-[10%] left-[15%] w-96 h-96 rounded-full bg-primary/20 blur-[100px] pointer-events-none" />
+      <div className="animate-glow-orb-delayed absolute bottom-[10%] right-[15%] w-96 h-96 rounded-full bg-accent-indigo/20 blur-[100px] pointer-events-none" />
 
-      {/* Login Form Container */}
-      <div
-        ref={cardRef}
-        className="w-full max-w-md p-8 rounded-3xl glass-panel border border-white/10 z-10 shadow-2xl flex flex-col items-center"
-      >
+      {/* Login Form Container — CSS slide-up + fade */}
+      <div className="animate-card-enter w-full max-w-md p-8 rounded-3xl glass-panel border border-white/10 z-10 shadow-2xl flex flex-col items-center">
         {/* Header Icon */}
         <div className="h-16 w-16 mb-4 rounded-2xl bg-gradient-to-tr from-primary to-accent-indigo flex items-center justify-center text-white font-black text-2xl shadow-xl shadow-primary/20">
           OC

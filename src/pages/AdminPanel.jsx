@@ -1,6 +1,4 @@
-import { useEffect, useState, useRef } from "react";
-import { useDispatch, useSelector } from "react-redux";
-import gsap from "gsap";
+import { useEffect, useState } from "react";
 import {
   FiUsers,
   FiMessageSquare,
@@ -40,38 +38,10 @@ const AdminPanel = () => {
   const [role, setRole] = useState("employee");
   const [formError, setFormError] = useState("");
 
-  const containerRef = useRef(null);
-
   useEffect(() => {
     dispatch(fetchAdminUsers());
     dispatch(fetchAdminAnalytics());
   }, [dispatch]);
-
-  // GSAP animations for cards and grid list
-  useEffect(() => {
-    if (!loadingAnalytics && !loadingUsers) {
-      const ctx = gsap.context(() => {
-        gsap.fromTo(
-          ".stat-card",
-          { opacity: 0, scale: 0.95, y: 15 },
-          {
-            opacity: 1,
-            scale: 1,
-            y: 0,
-            duration: 0.5,
-            ease: "power2.out",
-            stagger: 0.08,
-          },
-        );
-        gsap.fromTo(
-          ".admin-grid",
-          { opacity: 0, y: 20 },
-          { opacity: 1, y: 0, duration: 0.7, ease: "power2.out", delay: 0.2 },
-        );
-      }, containerRef);
-      return () => ctx.revert();
-    }
-  }, [loadingAnalytics, loadingUsers]);
 
   const handleAddUser = async (e) => {
     e.preventDefault();
@@ -177,7 +147,6 @@ const AdminPanel = () => {
 
   return (
     <div
-      ref={containerRef}
       className="flex flex-col h-screen w-screen overflow-hidden bg-gray-100 dark:bg-dark-bg text-gray-800 dark:text-dark-text transition-colors duration-300"
     >
       {/* Top Navbar */}
@@ -292,8 +261,7 @@ const AdminPanel = () => {
           <AnalyticsSkeleton />
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-            {/* Total Employees */}
-            <div className="stat-card p-6 bg-white dark:bg-dark-card border border-gray-200 dark:border-dark-border rounded-3xl shadow-sm flex items-center justify-between">
+            <div className="stat-card animate-card-enter p-6 bg-white dark:bg-dark-card border border-gray-200 dark:border-dark-border rounded-3xl shadow-sm flex items-center justify-between">
               <div>
                 <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
                   Total Employees
@@ -307,8 +275,7 @@ const AdminPanel = () => {
               </div>
             </div>
 
-            {/* Online Employees */}
-            <div className="stat-card p-6 bg-white dark:bg-dark-card border border-gray-200 dark:border-dark-border rounded-3xl shadow-sm flex items-center justify-between">
+            <div className="stat-card animate-card-enter-d1 p-6 bg-white dark:bg-dark-card border border-gray-200 dark:border-dark-border rounded-3xl shadow-sm flex items-center justify-between">
               <div>
                 <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
                   Online Employees
@@ -322,8 +289,7 @@ const AdminPanel = () => {
               </div>
             </div>
 
-            {/* Active Chat Threads */}
-            <div className="stat-card p-6 bg-white dark:bg-dark-card border border-gray-200 dark:border-dark-border rounded-3xl shadow-sm flex items-center justify-between">
+            <div className="stat-card animate-card-enter-d2 p-6 bg-white dark:bg-dark-card border border-gray-200 dark:border-dark-border rounded-3xl shadow-sm flex items-center justify-between">
               <div>
                 <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
                   Active Chats
@@ -337,8 +303,7 @@ const AdminPanel = () => {
               </div>
             </div>
 
-            {/* Total Messages Posted */}
-            <div className="stat-card p-6 bg-white dark:bg-dark-card border border-gray-200 dark:border-dark-border rounded-3xl shadow-sm flex items-center justify-between">
+            <div className="stat-card animate-card-enter-d3 p-6 bg-white dark:bg-dark-card border border-gray-200 dark:border-dark-border rounded-3xl shadow-sm flex items-center justify-between">
               <div>
                 <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
                   Total Messages
@@ -355,7 +320,7 @@ const AdminPanel = () => {
         )}
 
         {/* User Management Table Grid */}
-        <div className="admin-grid rounded-3xl bg-white dark:bg-dark-card border border-gray-200 dark:border-dark-border shadow-sm overflow-hidden">
+        <div className="admin-grid animate-fade-up rounded-3xl bg-white dark:bg-dark-card border border-gray-200 dark:border-dark-border shadow-sm overflow-hidden">
           <div className="p-6 border-b border-gray-200 dark:border-dark-border">
             <h3 className="font-extrabold text-lg">
               Employee Member Directory
