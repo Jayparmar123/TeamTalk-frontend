@@ -42,9 +42,16 @@ const Login = () => {
 
     const actionResult = await dispatch(loginUser({ email, password }));
     if (loginUser.fulfilled.match(actionResult)) {
-      showToast(`Logged in successfully! Welcome, ${actionResult.payload.user.name}.`, "success");
+      showToast(
+        `Logged in successfully! Welcome, ${actionResult.payload.user.name}.`,
+        "success",
+      );
     } else if (loginUser.rejected.match(actionResult)) {
-      showToast(actionResult.payload || "Authentication failed. Please check your credentials.", "error");
+      showToast(
+        actionResult.payload ||
+          "Authentication failed. Please check your credentials.",
+        "error",
+      );
     }
   };
 
@@ -118,29 +125,6 @@ const Login = () => {
             {loading ? "Authenticating..." : "Sign In"}
           </button>
         </form>
-
-        {/* Seeder Helper Notice */}
-        <div className="mt-8 pt-6 w-full border-t border-white/5 flex flex-col items-center gap-1.5 text-center">
-          <p className="text-xs text-gray-500 font-bold uppercase tracking-widest">
-            Testing Credentials
-          </p>
-          <div className="text-xs text-gray-400 font-medium">
-            <p>
-              Admin:{" "}
-              <span className="text-primary-light font-mono select-all">
-                admin@office.com
-              </span>{" "}
-              | <span className="font-mono">admin123</span>
-            </p>
-            <p>
-              User:{" "}
-              <span className="text-primary-light font-mono select-all">
-                john.doe@office.com
-              </span>{" "}
-              | <span className="font-mono">user123</span>
-            </p>
-          </div>
-        </div>
       </div>
     </div>
   );
