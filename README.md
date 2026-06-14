@@ -22,13 +22,9 @@ https://team-talk-frontend-alpha.vercel.app
 
 ## 🛠️ Tech Stack
 
-* React.js
-* Redux Toolkit
-* React Router DOM
-* Axios
-* Socket.IO Client
-* Tailwind CSS
-* Vite
+<p align="center">
+  <img src="https://skillicons.dev/icons?i=react,vite,redux,tailwind,js,git,github,vscode" alt="Frontend Tech Stack" />
+</p>
 
 ## 🌐 Frontend Architecture
 
