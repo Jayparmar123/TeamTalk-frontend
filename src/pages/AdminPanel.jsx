@@ -20,6 +20,7 @@ import {
 import { AnalyticsSkeleton } from "../components/common/Loading.jsx";
 import { useToast } from "../context/ToastContext.jsx";
 import { useConfirm } from "../context/ConfirmContext.jsx";
+import { useDispatch, useSelector } from "react-redux";
 
 const AdminPanel = () => {
   const dispatch = useDispatch();
@@ -81,16 +82,19 @@ const AdminPanel = () => {
     const newRole = user.role === "admin" ? "employee" : "admin";
     const isConfirmed = await confirm(
       `Are you sure you want to change the role of ${user.name} from ${user.role} to ${newRole}?`,
-      'Modify Permissions',
-      'Change Role',
-      'Cancel'
+      "Modify Permissions",
+      "Change Role",
+      "Cancel",
     );
     if (isConfirmed) {
       const actionResult = await dispatch(
         adminUpdateUser({ id: user._id, updateData: { role: newRole } }),
       );
       if (adminUpdateUser.fulfilled.match(actionResult)) {
-        showToast(`Role for ${user.name} changed to ${newRole} successfully.`, "success");
+        showToast(
+          `Role for ${user.name} changed to ${newRole} successfully.`,
+          "success",
+        );
       } else {
         showToast(actionResult.payload || "Failed to update role.", "error");
       }
@@ -105,20 +109,26 @@ const AdminPanel = () => {
     const newStatus = !user.isActive;
     const actionText = newStatus ? "Reactivate" : "Deactivate / Soft Delete";
     const isConfirmed = await confirm(
-      `Are you sure you want to ${newStatus ? 'reactivate' : 'deactivate'} the account of ${user.name}?`,
+      `Are you sure you want to ${newStatus ? "reactivate" : "deactivate"} the account of ${user.name}?`,
       `${actionText} Account`,
-      newStatus ? 'Reactivate' : 'Deactivate',
-      'Cancel'
+      newStatus ? "Reactivate" : "Deactivate",
+      "Cancel",
     );
     if (isConfirmed) {
       const actionResult = await dispatch(
         adminUpdateUser({ id: user._id, updateData: { isActive: newStatus } }),
       );
       if (adminUpdateUser.fulfilled.match(actionResult)) {
-        showToast(`Account for ${user.name} is now ${newStatus ? "active" : "inactive"}.`, "success");
+        showToast(
+          `Account for ${user.name} is now ${newStatus ? "active" : "inactive"}.`,
+          "success",
+        );
         dispatch(fetchAdminAnalytics()); // Refresh analytics
       } else {
-        showToast(actionResult.payload || `Failed to update account status.`, "error");
+        showToast(
+          actionResult.payload || `Failed to update account status.`,
+          "error",
+        );
       }
     }
   };
@@ -130,46 +140,52 @@ const AdminPanel = () => {
     }
     const isConfirmed = await confirm(
       `⚠️ WARNING: This will permanently remove ${user.name} and delete all related database logs. This action cannot be undone. Proceed?`,
-      'Delete Member Permanently',
-      'Delete User',
-      'Cancel'
+      "Delete Member Permanently",
+      "Delete User",
+      "Cancel",
     );
     if (isConfirmed) {
       const actionResult = await dispatch(adminDeleteUser(user._id));
       if (adminDeleteUser.fulfilled.match(actionResult)) {
-        showToast(`Permanently deleted employee ${user.name} successfully.`, "success");
+        showToast(
+          `Permanently deleted employee ${user.name} successfully.`,
+          "success",
+        );
         dispatch(fetchAdminAnalytics()); // Refresh analytics
       } else {
-        showToast(actionResult.payload || "Failed to delete employee.", "error");
+        showToast(
+          actionResult.payload || "Failed to delete employee.",
+          "error",
+        );
       }
     }
   };
 
   return (
-    <div
-      className="flex flex-col h-screen w-screen overflow-hidden bg-gray-100 dark:bg-dark-bg text-gray-800 dark:text-dark-text transition-colors duration-300"
-    >
+    <div className="flex flex-col h-screen w-screen overflow-hidden bg-gray-100 dark:bg-dark-bg text-gray-800 dark:text-dark-text transition-colors duration-300">
       {/* Top Navbar */}
       <Navbar />
 
       {/* Main Admin Content Frame */}
-      <main className="flex-1 overflow-y-auto p-8 space-y-8">
+      <main className="flex-1 overflow-y-auto p-4 md:p-8 space-y-6 md:space-y-8">
         {/* Title Header */}
-        <div className="flex justify-between items-center">
+        <div className="flex flex-wrap justify-between items-start md:items-center gap-3">
           <div>
-            <h2 className="text-3xl font-extrabold tracking-tight">
+            <h2 className="text-2xl md:text-3xl font-extrabold tracking-tight">
               Admin Dashboard
             </h2>
-            <p className="text-sm text-gray-500 dark:text-gray-400 font-semibold mt-1">
+            <p className="text-xs md:text-sm text-gray-500 dark:text-gray-400 font-semibold mt-1">
               Manage office directory and view chat statistics.
             </p>
           </div>
           <button
             onClick={() => setShowAddForm(!showAddForm)}
-            className="flex items-center gap-2 px-5 py-3 rounded-xl bg-primary hover:bg-primary-dark text-white font-bold text-sm shadow-lg shadow-primary/20 transition-all active:scale-[0.98]"
+            className="flex items-center gap-2 px-4 md:px-5 py-2.5 md:py-3 rounded-xl bg-primary hover:bg-primary-dark text-white font-bold text-sm shadow-lg shadow-primary/20 transition-all active:scale-[0.98] shrink-0"
           >
             <FiUserPlus size={18} />
-            {showAddForm ? "Close Registration" : "Add Employee"}
+            <span className="hidden sm:inline">
+              {showAddForm ? "Close Registration" : "Add Employee"}
+            </span>
           </button>
         </div>
 
@@ -260,7 +276,7 @@ const AdminPanel = () => {
         {loadingAnalytics ? (
           <AnalyticsSkeleton />
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-6">
             <div className="stat-card animate-card-enter p-6 bg-white dark:bg-dark-card border border-gray-200 dark:border-dark-border rounded-3xl shadow-sm flex items-center justify-between">
               <div>
                 <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">

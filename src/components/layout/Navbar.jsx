@@ -1,13 +1,14 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
-import { FiMessageSquare, FiTrendingUp, FiLogOut, FiSun, FiMoon, FiShield, FiCpu, FiChevronDown } from 'react-icons/fi';
+import { FiMessageSquare, FiTrendingUp, FiLogOut, FiSun, FiMoon, FiShield, FiCpu, FiChevronDown, FiArrowLeft } from 'react-icons/fi';
 import { useTheme } from '../../context/ThemeContext.jsx';
 import { logoutUser, logoutAllDevices } from '../../store/slices/authSlice.js';
 import { useToast } from '../../context/ToastContext.jsx';
 import { useConfirm } from '../../context/ConfirmContext.jsx';
+import { setActiveConversation } from '../../store/slices/chatSlice.js';
 
-const Navbar = () => {
+const Navbar = ({ onBack }) => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const { user } = useSelector((state) => state.auth);
@@ -66,30 +67,46 @@ const Navbar = () => {
       to: '/',
       label: 'Chats',
       icon: <FiMessageSquare size={16} />,
-      adminOnly: false
+      adminOnly: false,
+      onClick: () => {
+        dispatch(setActiveConversation(null));
+        localStorage.removeItem('teamtalk_active_convo_id');
+      },
     },
     {
       to: '/admin',
       label: 'Admin Panel',
       icon: <FiTrendingUp size={16} />,
-      adminOnly: true
+      adminOnly: true,
+      onClick: null,
     },
     {
       to: '/audit-logs',
       label: 'Audit Logs',
       icon: <FiShield size={16} />,
-      adminOnly: true
+      adminOnly: true,
+      onClick: null,
     }
   ];
 
   return (
-    <header className="w-full h-16 shrink-0 flex items-center justify-between px-6 border-b bg-[#F8F9FC] border-gray-200 dark:bg-dark-card dark:border-dark-border text-gray-800 dark:text-dark-text transition-colors duration-300 z-30">
-      {/* Left: Brand Logo */}
+    <header className="w-full h-16 shrink-0 flex items-center justify-between px-3 md:px-6 border-b bg-[#F8F9FC] border-gray-200 dark:bg-dark-card dark:border-dark-border text-gray-800 dark:text-dark-text transition-colors duration-300 z-30">
+      {/* Left: Brand Logo (or Back button on mobile) */}
       <div className="flex items-center gap-3">
-        <div className="h-9 w-9 rounded-xl bg-gradient-to-tr from-primary to-accent-indigo flex items-center justify-center text-white font-extrabold shadow-lg shadow-primary/20">
+        {/* Mobile back arrow — only shown when a chat is open */}
+        {onBack && (
+          <button
+            onClick={onBack}
+            className="md:hidden p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800/40 text-gray-500 dark:text-gray-400 transition-all mr-1"
+            aria-label="Back to chat list"
+          >
+            <FiArrowLeft size={20} />
+          </button>
+        )}
+        <div className="h-9 w-9 rounded-xl bg-gradient-to-tr from-primary to-accent-indigo flex items-center justify-center text-white font-extrabold shadow-lg shadow-primary/20 shrink-0">
           OC
         </div>
-        <div>
+        <div className="hidden sm:block">
           <h1 className="font-extrabold text-base leading-none tracking-tight bg-gradient-to-r from-primary to-accent-indigo bg-clip-text text-transparent">
             OfficeChat
           </h1>
@@ -107,6 +124,7 @@ const Navbar = () => {
             <NavLink
               key={item.to}
               to={item.to}
+              onClick={item.onClick || undefined}
               className={({ isActive }) =>
                 `flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-xs uppercase tracking-wider transition-all duration-200 ${
                   isActive

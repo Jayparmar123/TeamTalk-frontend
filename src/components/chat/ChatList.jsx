@@ -1,19 +1,28 @@
-import React, { useEffect, useState } from 'react';
-import { FiSearch, FiHash, FiUser, FiAnchor, FiAward } from 'react-icons/fi';
-import { fetchDirectoryUsers, setActiveConversation, fetchMessages } from '../../store/slices/chatSlice.js';
+import React, { useEffect, useState, useRef } from "react";
+import { FiSearch, FiHash, FiUser, FiAnchor, FiAward } from "react-icons/fi";
+import {
+  fetchDirectoryUsers,
+  setActiveConversation,
+  fetchMessages,
+} from "../../store/slices/chatSlice.js";
+import { useDispatch, useSelector } from "react-redux";
 
 const ChatList = () => {
   const dispatch = useDispatch();
-  const { directoryUsers, conversations, activeConversation, loadingDirectory } = useSelector((state) => state.chat);
+  const {
+    directoryUsers,
+    conversations,
+    activeConversation,
+    loadingDirectory,
+  } = useSelector((state) => state.chat);
   const { user: currentUser } = useSelector((state) => state.auth);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm] = useState("");
 
   const listRef = useRef(null);
 
   useEffect(() => {
     dispatch(fetchDirectoryUsers(searchTerm));
   }, [dispatch, searchTerm]);
-
 
   const handleSelectConvo = (convo) => {
     dispatch(setActiveConversation(convo));
@@ -22,8 +31,9 @@ const ChatList = () => {
 
   const handleSelectUser = (user) => {
     // Check if we have an existing conversation with this user
-    let existingConvo = conversations.find(convo =>
-      !convo.isGroup && convo.participants.some(p => p._id === user._id)
+    let existingConvo = conversations.find(
+      (convo) =>
+        !convo.isGroup && convo.participants.some((p) => p._id === user._id),
     );
 
     if (existingConvo) {
@@ -33,10 +43,22 @@ const ChatList = () => {
       const tempConvo = {
         _id: `temp-${user._id}`,
         participants: [
-          { _id: currentUser.id, name: currentUser.name, email: currentUser.email, avatarUrl: currentUser.avatarUrl },
-          { _id: user._id, name: user.name, email: user.email, avatarUrl: user.avatarUrl, isOnline: user.isOnline, lastSeen: user.lastSeen }
+          {
+            _id: currentUser.id,
+            name: currentUser.name,
+            email: currentUser.email,
+            avatarUrl: currentUser.avatarUrl,
+          },
+          {
+            _id: user._id,
+            name: user.name,
+            email: user.email,
+            avatarUrl: user.avatarUrl,
+            isOnline: user.isOnline,
+            lastSeen: user.lastSeen,
+          },
         ],
-        isTemp: true
+        isTemp: true,
       };
       dispatch(setActiveConversation(tempConvo));
     }
@@ -44,33 +66,39 @@ const ChatList = () => {
 
   // Check if a conversation is pinned
   const isConvoPinned = (convoId) => {
-    return currentUser?.pinnedConversations?.some(id => id === convoId || id?._id === convoId);
+    return currentUser?.pinnedConversations?.some(
+      (id) => id === convoId || id?._id === convoId,
+    );
   };
 
   // Find DM conversation for a specific user ID
   const getDMConvo = (userId) => {
-    return conversations.find(c => !c.isGroup && c.participants.some(p => p._id === userId));
+    return conversations.find(
+      (c) => !c.isGroup && c.participants.some((p) => p._id === userId),
+    );
   };
 
   // Get last message preview for colleagues
   const getConvoSummary = (userId) => {
     const convo = getDMConvo(userId);
     if (convo && convo.lastMessage) {
-      const isSentByMe = convo.lastMessage.sender === currentUser.id || convo.lastMessage.sender?._id === currentUser.id;
-      return `${isSentByMe ? 'You: ' : ''}${convo.lastMessage.isDeleted ? 'deleted message' : convo.lastMessage.text || 'sent attachment'}`;
+      const isSentByMe =
+        convo.lastMessage.sender === currentUser.id ||
+        convo.lastMessage.sender?._id === currentUser.id;
+      return `${isSentByMe ? "You: " : ""}${convo.lastMessage.isDeleted ? "deleted message" : convo.lastMessage.text || "sent attachment"}`;
     }
-    return 'Start direct message';
+    return "Start direct message";
   };
 
   // Filter Group Conversations
-  const groupChannels = conversations.filter(c => c.isGroup);
+  const groupChannels = conversations.filter((c) => c.isGroup);
 
   // Separate pinned conversations
-  const pinnedConvos = conversations.filter(c => isConvoPinned(c._id));
-  const unpinnedConvos = conversations.filter(c => !isConvoPinned(c._id));
+  const pinnedConvos = conversations.filter((c) => isConvoPinned(c._id));
+  const unpinnedConvos = conversations.filter((c) => !isConvoPinned(c._id));
 
   // Channels (excluding pinned ones)
-  const unpinnedChannels = groupChannels.filter(c => !isConvoPinned(c._id));
+  const unpinnedChannels = groupChannels.filter((c) => !isConvoPinned(c._id));
 
   // Sort directory users: online users at the top, then offline users
   const sortedDirectoryUsers = [...directoryUsers].sort((a, b) => {
@@ -80,7 +108,7 @@ const ChatList = () => {
   });
 
   return (
-    <div className="w-80 h-full flex flex-col bg-white border-r border-gray-200 dark:bg-dark-bg dark:border-dark-border transition-colors duration-300">
+    <div className="w-full h-full flex flex-col bg-white border-r border-gray-200 dark:bg-dark-bg dark:border-dark-border transition-colors duration-300">
       {/* Search Bar Header */}
       <div className="p-4 border-b border-gray-200 dark:border-dark-border">
         <h3 className="text-sm font-extrabold uppercase tracking-widest text-gray-500 mb-3">
@@ -101,8 +129,10 @@ const ChatList = () => {
       </div>
 
       {/* Main List Scroller */}
-      <div ref={listRef} className="flex-1 overflow-y-auto p-2.5 space-y-5 no-scrollbar">
-        
+      <div
+        ref={listRef}
+        className="flex-1 overflow-y-auto p-2.5 space-y-5 no-scrollbar"
+      >
         {/* SECTION 1: PINNED CONVERSATIONS */}
         {pinnedConvos.length > 0 && (
           <div className="space-y-1">
@@ -112,8 +142,13 @@ const ChatList = () => {
             </div>
             {pinnedConvos.map((convo) => {
               const isActive = activeConversation?._id === convo._id;
-              const name = convo.isGroup ? convo.name : convo.participants.find(p => p._id !== currentUser.id)?.name;
-              const subText = convo.lastMessage ? convo.lastMessage.text : 'Seeded chat room';
+              const name = convo.isGroup
+                ? convo.name
+                : convo.participants.find((p) => p._id !== currentUser.id)
+                    ?.name;
+              const subText = convo.lastMessage
+                ? convo.lastMessage.text
+                : "Seeded chat room";
 
               return (
                 <div
@@ -121,16 +156,24 @@ const ChatList = () => {
                   onClick={() => handleSelectConvo(convo)}
                   className={`chat-item-row flex items-center gap-2.5 p-2.5 rounded-xl cursor-pointer border border-transparent transition-all ${
                     isActive
-                      ? 'bg-primary/10 dark:bg-dark-card border-primary/20 dark:border-dark-border shadow-sm'
-                      : 'hover:bg-gray-50 dark:hover:bg-dark-card/30'
+                      ? "bg-primary/10 dark:bg-dark-card border-primary/20 dark:border-dark-border shadow-sm"
+                      : "hover:bg-gray-50 dark:hover:bg-dark-card/30"
                   }`}
                 >
                   <div className="h-7 w-7 rounded-lg bg-gradient-to-tr from-primary/10 to-accent-indigo/10 flex items-center justify-center text-primary dark:text-primary-light text-xs font-bold shrink-0">
-                    {convo.isGroup ? <FiHash size={14} /> : <FiUser size={14} />}
+                    {convo.isGroup ? (
+                      <FiHash size={14} />
+                    ) : (
+                      <FiUser size={14} />
+                    )}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="font-bold text-xs truncate text-gray-800 dark:text-dark-text">{name}</p>
-                    <p className="text-[10px] text-gray-500 truncate">{subText}</p>
+                    <p className="font-bold text-xs truncate text-gray-800 dark:text-dark-text">
+                      {name}
+                    </p>
+                    <p className="text-[10px] text-gray-500 truncate">
+                      {subText}
+                    </p>
                   </div>
                   <span className="text-[10px] text-primary font-bold">📌</span>
                 </div>
@@ -144,8 +187,11 @@ const ChatList = () => {
           <div className="chat-item-header flex items-center px-2.5 mb-1.5 text-[10px] font-black uppercase text-gray-400 dark:text-gray-500 tracking-wider">
             Channels 📢
           </div>
-          {unpinnedChannels.length === 0 && pinnedConvos.filter(c => c.isGroup).length === 0 ? (
-            <p className="text-[10px] text-gray-400 font-semibold px-2.5">No channels active</p>
+          {unpinnedChannels.length === 0 &&
+          pinnedConvos.filter((c) => c.isGroup).length === 0 ? (
+            <p className="text-[10px] text-gray-400 font-semibold px-2.5">
+              No channels active
+            </p>
           ) : (
             unpinnedChannels.map((convo) => {
               const isActive = activeConversation?._id === convo._id;
@@ -155,17 +201,21 @@ const ChatList = () => {
                   onClick={() => handleSelectConvo(convo)}
                   className={`chat-item-row flex items-center gap-2.5 p-2.5 rounded-xl cursor-pointer border border-transparent transition-all ${
                     isActive
-                      ? 'bg-primary/10 dark:bg-dark-card border-primary/20 dark:border-dark-border shadow-sm'
-                      : 'hover:bg-gray-50 dark:hover:bg-dark-card/30'
+                      ? "bg-primary/10 dark:bg-dark-card border-primary/20 dark:border-dark-border shadow-sm"
+                      : "hover:bg-gray-50 dark:hover:bg-dark-card/30"
                   }`}
                 >
                   <div className="h-7 w-7 rounded-lg bg-accent-rose/10 text-accent-rose flex items-center justify-center text-xs font-bold shrink-0">
                     <FiHash size={14} />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="font-bold text-xs truncate text-gray-800 dark:text-dark-text">{convo.name}</p>
+                    <p className="font-bold text-xs truncate text-gray-800 dark:text-dark-text">
+                      {convo.name}
+                    </p>
                     <p className="text-[10px] text-gray-500 truncate">
-                      {convo.lastMessage ? convo.lastMessage.text : 'Welcome to general channel'}
+                      {convo.lastMessage
+                        ? convo.lastMessage.text
+                        : "Welcome to general channel"}
                     </p>
                   </div>
                 </div>
@@ -181,19 +231,27 @@ const ChatList = () => {
           </div>
           {loadingDirectory && directoryUsers.length === 0 ? (
             <div className="space-y-2 p-1">
-              {[1, 2, 3].map(n => (
-                <div key={n} className="h-9 rounded-lg bg-gray-200 dark:bg-gray-800 animate-pulse"></div>
+              {[1, 2, 3].map((n) => (
+                <div
+                  key={n}
+                  className="h-9 rounded-lg bg-gray-200 dark:bg-gray-800 animate-pulse"
+                ></div>
               ))}
             </div>
           ) : sortedDirectoryUsers.length === 0 ? (
-            <p className="text-[10px] text-gray-400 font-semibold px-2.5">No colleagues found</p>
+            <p className="text-[10px] text-gray-400 font-semibold px-2.5">
+              No colleagues found
+            </p>
           ) : (
             sortedDirectoryUsers.map((member) => {
               const dmConvo = getDMConvo(member._id);
               // Skip rendering here if it's already in the pinned section to avoid duplicates
               if (dmConvo && isConvoPinned(dmConvo._id)) return null;
 
-              const isActive = activeConversation?.participants.some(p => p._id === member._id) && !activeConversation.isGroup;
+              const isActive =
+                activeConversation?.participants.some(
+                  (p) => p._id === member._id,
+                ) && !activeConversation.isGroup;
               const summary = getConvoSummary(member._id);
 
               return (
@@ -202,14 +260,17 @@ const ChatList = () => {
                   onClick={() => handleSelectUser(member)}
                   className={`chat-item-row flex items-center gap-2.5 p-2 rounded-xl cursor-pointer border border-transparent transition-all ${
                     isActive
-                      ? 'bg-primary/10 dark:bg-dark-card border-primary/20 dark:border-dark-border shadow-sm'
-                      : 'hover:bg-gray-50 dark:hover:bg-dark-card/30'
+                      ? "bg-primary/10 dark:bg-dark-card border-primary/20 dark:border-dark-border shadow-sm"
+                      : "hover:bg-gray-50 dark:hover:bg-dark-card/30"
                   }`}
                 >
                   {/* Avatar */}
                   <div className="relative shrink-0">
                     <img
-                      src={member.avatarUrl || `https://api.dicebear.com/7.x/initials/svg?seed=${member.name}`}
+                      src={
+                        member.avatarUrl ||
+                        `https://api.dicebear.com/7.x/initials/svg?seed=${member.name}`
+                      }
                       alt={member.name}
                       className="h-8 w-8 rounded-lg object-cover bg-gray-200 dark:bg-gray-700 shadow-sm border border-gray-200 dark:border-gray-600"
                     />
@@ -223,8 +284,12 @@ const ChatList = () => {
                       <p className="font-bold text-xs text-gray-800 dark:text-dark-text truncate">
                         {member.name}
                       </p>
-                      {member.role === 'admin' && (
-                        <FiAward size={12} className="text-primary shrink-0" title="Administrator" />
+                      {member.role === "admin" && (
+                        <FiAward
+                          size={12}
+                          className="text-primary shrink-0"
+                          title="Administrator"
+                        />
                       )}
                     </div>
                     <p className="text-[10px] text-gray-400 truncate max-w-[190px]">

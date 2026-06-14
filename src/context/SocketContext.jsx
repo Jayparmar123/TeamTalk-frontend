@@ -16,6 +16,7 @@ import {
   memberJoined,
   memberLeft,
   memberUpdated,
+  channelMemberAdded,
   addEditedMessage,
   addDeletedMessage,
 } from "../store/slices/chatSlice.js";
@@ -102,6 +103,11 @@ export const SocketProvider = ({ children }) => {
 
       socketInstance.on("member:update", (user) => {
         dispatch(memberUpdated(user));
+      });
+
+      // New user added to a channel (e.g. General) by admin
+      socketInstance.on("channel:member:added", (data) => {
+        dispatch(channelMemberAdded(data));
       });
 
       // Bind deactivation logout

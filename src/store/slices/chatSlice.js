@@ -99,6 +99,19 @@ export const fetchDirectoryUsers = createAsyncThunk(
   }
 );
 
+// Ensure the General channel exists and inject it into conversations if missing
+export const fetchGeneralChannel = createAsyncThunk(
+  'chat/fetchGeneralChannel',
+  async (_, { rejectWithValue }) => {
+    try {
+      const response = await api.get('/admin/general-channel');
+      return response.data.channel;
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.error || error.message);
+    }
+  }
+);
+
 const initialState = {
   conversations: [],
   activeConversation: null,
@@ -118,6 +131,23 @@ const chatSlice = createSlice({
   reducers: {
     setActiveConversation: (state, action) => {
       state.activeConversation = action.payload;
+    },
+    // Optimistic UI: add a placeholder message instantly before API responds
+    addOptimisticMessage: (state, action) => {
+      const { message, conversationId } = action.payload;
+      if (!state.messages[conversationId]) {
+        state.messages[conversationId] = [];
+      }
+      state.messages[conversationId].push(message);
+    },
+    // Remove optimistic placeholder if API call fails
+    removeOptimisticMessage: (state, action) => {
+      const { optimisticId, conversationId } = action.payload;
+      if (state.messages[conversationId]) {
+        state.messages[conversationId] = state.messages[conversationId].filter(
+          m => m._id !== optimisticId
+        );
+      }
     },
     // Socket Event: Message Received
     addReceivedMessage: (state, action) => {
@@ -293,7 +323,32 @@ const chatSlice = createSlice({
     },
     clearChatError: (state) => {
       state.error = null;
-    }
+    },
+    // Socket Event: New user was added to a channel (e.g. General) by the server
+    channelMemberAdded: (state, action) => {
+      const { conversationId, user } = action.payload;
+
+      // Update the participants array in the conversations sidebar list
+      const convoIndex = state.conversations.findIndex(c => c._id === conversationId);
+      if (convoIndex !== -1) {
+        const alreadyIn = state.conversations[convoIndex].participants.some(
+          p => (p._id || p) === user._id
+        );
+        if (!alreadyIn) {
+          state.conversations[convoIndex].participants.push(user);
+        }
+      }
+
+      // Also update activeConversation if the General channel is open
+      if (state.activeConversation?._id === conversationId) {
+        const alreadyIn = state.activeConversation.participants.some(
+          p => (p._id || p) === user._id
+        );
+        if (!alreadyIn) {
+          state.activeConversation.participants.push(user);
+        }
+      }
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -327,20 +382,13 @@ const chatSlice = createSlice({
         if (!state.messages[conversationId]) {
           state.messages[conversationId] = [];
         }
-        state.messages[conversationId].push(message);
 
-        // ─── TEMP CONVERSATION FIX ─────────────────────────────────────────
-        // When the user sends their first-ever message to a colleague, a local
-        // "temp" conversation (_id: "temp-<userId>") is used as a placeholder.
-        // The server creates a real conversation and returns its real _id.
-        // We must promote activeConversation from the temp id to the real id
-        // so ChatWindow's message lookup (messages[activeConversation._id])
-        // immediately resolves — no page refresh required.
+        // ─── TEMP CONVERSATION CASE ────────────────────────────────────────
         if (state.activeConversation?.isTemp) {
-          // Capture participants BEFORE mutating activeConversation (Immer ordering)
           const participants = state.activeConversation.participants;
+          const tempId = state.activeConversation._id;
 
-          // Promote temp conversation to real conversation
+          // Promote temp → real conversation
           state.activeConversation = {
             ...state.activeConversation,
             _id: conversationId,
@@ -348,7 +396,13 @@ const chatSlice = createSlice({
             lastMessage: message
           };
 
-          // Add the new real conversation to the top of the sidebar list
+          // Replace any optimistic/temp messages with the real one
+          state.messages[conversationId] = [message];
+          if (state.messages[tempId]) {
+            delete state.messages[tempId];
+          }
+
+          // Add real conversation to sidebar
           const alreadyInList = state.conversations.some(c => c._id === conversationId);
           if (!alreadyInList) {
             state.conversations.unshift({
@@ -359,15 +413,32 @@ const chatSlice = createSlice({
               updatedAt: new Date().toISOString()
             });
           }
-          return; // exit early — list already updated above
+          return;
         }
-        // ──────────────────────────────────────────────────────────────────
+        // ───────────────────────────────────────────────────────────────────
 
-        // Update last message in existing thread
+        // ─── REGULAR CONVERSATION CASE ─────────────────────────────────────
+        // Replace the optimistic placeholder with the real server message.
+        // The optimistic message has isOptimistic:true so we can find it.
+        const optimisticIndex = state.messages[conversationId].findIndex(
+          m => m.isOptimistic
+        );
+        if (optimisticIndex !== -1) {
+          // Swap in the real message in-place (same position, no visual jump)
+          state.messages[conversationId][optimisticIndex] = message;
+        } else {
+          // Fallback: optimistic was already replaced or missing — add if not duplicate
+          const exists = state.messages[conversationId].some(m => m._id === message._id);
+          if (!exists) {
+            state.messages[conversationId].push(message);
+          }
+        }
+        // ───────────────────────────────────────────────────────────────────
+
+        // Bubble conversation to top of sidebar
         const convoIndex = state.conversations.findIndex(c => c._id === conversationId);
         if (convoIndex !== -1) {
           state.conversations[convoIndex].lastMessage = message;
-          // Move conversation to the top
           const [convo] = state.conversations.splice(convoIndex, 1);
           state.conversations.unshift(convo);
         }
@@ -383,6 +454,19 @@ const chatSlice = createSlice({
       .addCase(fetchDirectoryUsers.rejected, (state, action) => {
         state.loadingDirectory = false;
         state.error = action.payload;
+      })
+      // Fetch / ensure General channel
+      .addCase(fetchGeneralChannel.fulfilled, (state, action) => {
+        const channel = action.payload;
+        if (!channel) return;
+        const idx = state.conversations.findIndex(c => c._id === channel._id);
+        if (idx === -1) {
+          // General channel not in list — inject it at the top
+          state.conversations.unshift(channel);
+        } else {
+          // Update participants in case new members were added
+          state.conversations[idx].participants = channel.participants;
+        }
       })
       // Edit message fulfillment
       .addCase(editMessageThunk.fulfilled, (state, action) => {
@@ -418,6 +502,8 @@ const chatSlice = createSlice({
 
 export const {
   setActiveConversation,
+  addOptimisticMessage,
+  removeOptimisticMessage,
   addReceivedMessage,
   setUserOnline,
   setUserOffline,
@@ -425,6 +511,7 @@ export const {
   memberJoined,
   memberLeft,
   memberUpdated,
+  channelMemberAdded,
   addEditedMessage,
   addDeletedMessage,
   clearChatError

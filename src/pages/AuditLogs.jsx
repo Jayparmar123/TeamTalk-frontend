@@ -58,13 +58,13 @@ const AuditLogs = () => {
       <Navbar />
 
       {/* Main Container */}
-      <main className="flex-1 overflow-y-auto p-8 space-y-6">
+      <main className="flex-1 overflow-y-auto p-4 md:p-8 space-y-6">
         <div>
-          <h2 className="text-3xl font-extrabold tracking-tight flex items-center gap-2">
+          <h2 className="text-2xl md:text-3xl font-extrabold tracking-tight flex items-center gap-2">
             <FiShield className="text-primary" />
             Security Audit Logs
           </h2>
-          <p className="text-sm text-gray-500 dark:text-gray-400 font-semibold mt-1">
+          <p className="text-xs md:text-sm text-gray-500 dark:text-gray-400 font-semibold mt-1">
             Immutable workspace logs tracking administrator and system
             operations.
           </p>

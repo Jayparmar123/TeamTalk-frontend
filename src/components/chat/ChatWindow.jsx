@@ -12,6 +12,7 @@ import {
   FiDownload,
   FiFileText,
   FiHash,
+  FiArrowLeft,
 } from "react-icons/fi";
 import { useSocket } from "../../context/SocketContext.jsx";
 import {
@@ -19,13 +20,15 @@ import {
   editMessageThunk,
   deleteMessageThunk,
   pinConversationThunk,
+  addOptimisticMessage,
+  removeOptimisticMessage,
 } from "../../store/slices/chatSlice.js";
 import { ChatSkeleton } from "../common/Loading.jsx";
 import api from "../../utils/api.js";
 import { useToast } from "../../context/ToastContext.jsx";
 import { useConfirm } from "../../context/ConfirmContext.jsx";
 
-const ChatWindow = () => {
+const ChatWindow = ({ onBack }) => {
   const socket = useSocket();
   const dispatch = useDispatch();
   const { activeConversation, messages, typingStates, loadingMessages } =
@@ -225,7 +228,7 @@ const ChatWindow = () => {
         showToast(actionResult.payload || "Failed to update message.", "error");
       }
     } else {
-      // Send new message flow
+      // ─── Send new message flow ────────────────────────────────────────────
       const payload = activeConversation.isGroup
         ? {
             conversationId: activeConversation._id,
@@ -242,19 +245,62 @@ const ChatWindow = () => {
             fileType: attachment?.type,
           };
 
+      // ── OPTIMISTIC UPDATE ─────────────────────────────────────────────────
+      // Show the message instantly in the UI — don't wait for the server.
+      // The slice will replace this placeholder with the real message once
+      // the API responds (same position, no visual flicker).
+      const optimisticId = `optimistic-${Date.now()}`;
+      const optimisticConvoId = activeConversation._id; // capture before any temp->real swap
+      if (!activeConversation.isTemp) {
+        // Only add optimistic for existing conversations.
+        // Temp conversations don't have a stable ID yet, the slice handles them.
+        dispatch(addOptimisticMessage({
+          conversationId: optimisticConvoId,
+          message: {
+            _id: optimisticId,
+            conversationId: optimisticConvoId,
+            sender: {
+              _id: currentUser.id,
+              name: currentUser.name,
+              avatarUrl: currentUser.avatarUrl,
+            },
+            text: currentText,
+            fileUrl: attachment?.url || '',
+            fileName: attachment?.name || '',
+            fileType: attachment?.type || '',
+            createdAt: new Date().toISOString(),
+            isOptimistic: true,   // flag used by the reducer to find & replace
+          }
+        }));
+      }
+      // ─────────────────────────────────────────────────────────────────────
+
       const actionResult = await dispatch(sendNewMessage(payload));
 
-      if (sendNewMessage.fulfilled.match(actionResult) && socket) {
-        const { message, conversationId } = actionResult.payload;
-        socket.emit("message:send", {
-          conversationId,
-          recipientId: recipient?._id,
-          participants: activeConversation.isGroup
-            ? activeConversation.participants.map((p) => p._id)
-            : null,
-          message,
-        });
+      if (sendNewMessage.fulfilled.match(actionResult)) {
+        // Emit socket event so RECIPIENT sees the message in real-time
+        if (socket) {
+          const { message, conversationId } = actionResult.payload;
+          socket.emit("message:send", {
+            conversationId,
+            recipientId: recipient?._id,
+            participants: activeConversation.isGroup
+              ? activeConversation.participants.map((p) => p._id)
+              : null,
+            message,
+          });
+        }
+      } else {
+        // API failed — remove the optimistic placeholder so the UI is consistent
+        if (!activeConversation.isTemp) {
+          dispatch(removeOptimisticMessage({
+            optimisticId,
+            conversationId: optimisticConvoId,
+          }));
+        }
+        showToast(actionResult.payload || "Failed to send message.", "error");
       }
+      // ─────────────────────────────────────────────────────────────────────
     }
   };
 
@@ -306,7 +352,9 @@ const ChatWindow = () => {
 
   if (!activeConversation) {
     return (
-      <div className="flex-1 h-full flex flex-col items-center justify-center text-center p-8 bg-white dark:bg-dark-card transition-colors duration-300">
+      // On mobile this panel is hidden by Dashboard when no convo is active,
+      // but on desktop it's always visible — show a friendly empty state.
+      <div className="flex-1 h-full flex-col items-center justify-center text-center p-8 bg-white dark:bg-dark-card transition-colors duration-300 hidden md:flex">
         <div className="h-16 w-16 mb-4 rounded-3xl bg-primary/10 flex items-center justify-center text-primary animate-pulse">
           <FiMessageSquare size={32} />
         </div>
@@ -314,8 +362,7 @@ const ChatWindow = () => {
           No Chat Active
         </h3>
         <p className="text-sm text-gray-400 font-medium max-w-xs mt-1.5 leading-relaxed">
-          Select an employee or General channel from the sidebar directory to
-          initiate a real-time conversation.
+          Select a colleague or channel from the list to start messaging.
         </p>
       </div>
     );
@@ -324,11 +371,20 @@ const ChatWindow = () => {
   return (
     <div className="flex-1 h-full flex flex-col bg-white dark:bg-dark-card transition-colors duration-300">
       {/* Header Info */}
-      <div className="p-4 border-b border-gray-200 dark:border-dark-border flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="h-10 w-10 rounded-xl bg-gradient-to-tr from-primary/15 to-accent-indigo/15 flex items-center justify-center text-primary dark:text-primary-light font-bold shrink-0">
+      <div className="p-3 md:p-4 border-b border-gray-200 dark:border-dark-border flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2 md:gap-3 min-w-0 flex-1">
+          {/* Mobile back button — visible only on small screens */}
+          <button
+            onClick={onBack}
+            className="md:hidden p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 dark:text-gray-400 transition-colors shrink-0"
+            aria-label="Back to chat list"
+          >
+            <FiArrowLeft size={18} />
+          </button>
+
+          <div className="h-9 w-9 md:h-10 md:w-10 rounded-xl bg-gradient-to-tr from-primary/15 to-accent-indigo/15 flex items-center justify-center text-primary dark:text-primary-light font-bold shrink-0">
             {activeConversation.isGroup ? (
-              <FiHash size={20} />
+              <FiHash size={18} />
             ) : (
               <img
                 src={
@@ -336,17 +392,17 @@ const ChatWindow = () => {
                   `https://api.dicebear.com/7.x/initials/svg?seed=${recipient?.name}`
                 }
                 alt={recipient?.name}
-                className="h-10 w-10 rounded-xl object-cover"
+                className="h-9 w-9 md:h-10 md:w-10 rounded-xl object-cover"
               />
             )}
           </div>
-          <div>
-            <h4 className="font-bold text-sm text-gray-900 dark:text-dark-text flex items-center gap-2">
+          <div className="min-w-0 flex-1">
+            <h4 className="font-bold text-sm text-gray-900 dark:text-dark-text truncate">
               {activeConversation.isGroup
                 ? activeConversation.name
                 : recipient?.name}
             </h4>
-            <p className="text-[10px] text-gray-500 dark:text-gray-400 font-semibold truncate max-w-[280px]">
+            <p className="text-[10px] text-gray-500 dark:text-gray-400 font-semibold truncate">
               {activeConversation.isGroup
                 ? `${activeConversation.participants.length} members`
                 : recipient?.email}
@@ -424,9 +480,9 @@ const ChatWindow = () => {
                   <div className="relative flex items-center gap-2 group-hover:flex-row">
                     {/* Message Bubble */}
                     <div
-                      className={`p-3.5 text-sm leading-relaxed ${
+                      className={`p-3.5 text-sm leading-relaxed transition-opacity ${
                         isMe
-                          ? "bg-gradient-to-tr from-primary to-accent-indigo text-white rounded-[22px] rounded-tr-[4px] shadow-md shadow-primary/10"
+                          ? `bg-gradient-to-tr from-primary to-accent-indigo text-white rounded-[22px] rounded-tr-[4px] shadow-md shadow-primary/10 ${msg.isOptimistic ? 'opacity-70' : 'opacity-100'}`
                           : "bg-[#dee7ff] dark:bg-[#1A233A] border border-gray-200/80 dark:border-[#2B3A5C] text-gray-800 dark:text-dark-text rounded-[22px] rounded-tl-[4px] shadow-sm"
                       }`}
                     >
@@ -517,17 +573,27 @@ const ChatWindow = () => {
                     )}
                   </div>
 
-                  {/* Timestamp and Edit Badge */}
+                  {/* Timestamp / Sending indicator */}
                   <div
                     className={`flex items-center gap-1.5 text-[9px] text-gray-400 font-semibold px-1 ${isMe ? "justify-end" : "justify-start"}`}
                   >
-                    {msg.isEdited && (
-                      <span className="text-[8px] bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded font-extrabold uppercase">
-                        Edited
+                    {msg.isOptimistic ? (
+                      // Pulsing "Sending..." indicator while message is in flight
+                      <span className="flex items-center gap-1 text-gray-400 animate-pulse">
+                        <span className="h-1.5 w-1.5 rounded-full bg-gray-400" />
+                        Sending...
                       </span>
+                    ) : (
+                      <>
+                        {msg.isEdited && (
+                          <span className="text-[8px] bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded font-extrabold uppercase">
+                            Edited
+                          </span>
+                        )}
+                        <FiClock size={10} />
+                        <span>{time}</span>
+                      </>
                     )}
-                    <FiClock size={10} />
-                    <span>{time}</span>
                   </div>
                 </div>
               </div>
