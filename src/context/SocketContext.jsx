@@ -9,6 +9,8 @@ import {
   setAdminUserOffline,
 } from "../store/slices/adminSlice.js";
 import {
+  fetchConversations,
+  fetchDirectoryUsers,
   addReceivedMessage,
   setUserOnline,
   setUserOffline,
@@ -52,6 +54,8 @@ export const SocketProvider = ({ children }) => {
 
       socketInstance.on("connect", () => {
         console.log("Socket connected successfully:", socketInstance.id);
+        dispatch(fetchConversations());
+        dispatch(fetchDirectoryUsers());
       });
 
       // Bind message delivery
